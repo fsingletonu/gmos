@@ -2160,7 +2160,343 @@ typedef struct task
 
 ###### 前置知识
 
-请先学习红黑树的基本知识。
+红黑树是必要的，本系统红黑树的实现借助四阶B树理解，等价的四阶B树节点如下所示：
+
+![rbnode](photo\rbnode.png)
+
+<div align="center">图1 rbnode</div>
+
+借助考研的只是总结下来，红黑树有四条规律：
+
+1. 不红红
+2. 根叶黑
+3. 黑路同
+4. 左根右（这里表明红黑树还是一棵二叉排序树）
+
+接下来，先说红黑树插入的实现，具体骨架如下（这里直接过度到违反不红红的情况，不红红的情况已经说明父节点是红的）：
+
+```c
+void insert_rbtree_fixup(rbtree_node_t *node)
+{
+    if (node == NULL || node->parent == NULL)
+        return;
+
+    rbtree_node_t *parent = node->parent;
+    rbtree_node_t *gparent = node->parent->parent;
+
+    // 判断四种情况
+    if (gparent->l_child == parent)
+    {
+        rbtree_node_t *uncle = gparent->r_child;
+
+        if (parent->l_child == node)
+        {
+            ...
+        }
+        else
+        {
+            ...
+        }
+    }
+    else
+    {
+        rbtree_node_t *uncle = gparent->l_child;
+
+        if (parent->l_child == node)
+        {
+            ...
+        }
+        else
+        {
+            ...
+        }
+    }
+}
+```
+
+这里，判断四种情况都是使用地址对比的方式。当然，如果实在搞不清指针，那也是可以另外设标志位来判断的（这个方法仅供验证功能，效率有点低）。父节点、祖父节点、叔节点共同组成了4阶B树的一个节点，找叔叔就意味着查看四阶B树中插入节点的三位置占用情况（叔叔我呀……homo）。
+
+正因为父节点是红的，那说明：祖父节点一定不是红的。当叔节点是红的，那就说明：4阶B树的一个节点出现了上溢（说明要分裂）。这种情况下，要进行拆分，**染色就是拆分 + 补位**；当叔节点是黑色的，那就说明4阶B树节点满，需要分裂。具体的情况如下所示：
+
+对于LL的叔黑情况，与其等价的四阶B树的情况如下所示：
+
+![rbll](photo\rbll.png)
+
+<div align="center">图1 rbLL</div>
+
+遇到这样的情况，单看四阶B树的节点就是把左边插进来的值放入到节点中的左边，将原本的两个值右移，修复后如下图所示：
+
+![rbfix](photo\rbfix.png)
+
+<div align="center">图1 rbfix</div>
+
+实现以上的操作对应在红黑树中，便是**右旋 + 染色**。
+
+对于LL的叔红情况，与其等价的四阶B树的情况如下所示：
+
+![rbll_r](photo\rbll_r.png)
+
+<div align="center">图1 rbll_r</div>
+
+根据B树的自平衡性，这个已经满了的节点必须分裂，分裂后的情况如下所示：
+
+![rbll_r_fix](photo\rbll_r_fix.png)
+
+对于RR的叔黑情况，与其等价的四阶B树的情况如下所示：
+
+![rbrr](photo\rbrr.png)
+
+<div align="center">图1 rbrr</div>
+
+遇到这样的情况，单看四阶B树的节点就是把右边插进来的值放入到节点中的右边，将原本的两个值左移，修复后如下图所示：
+
+![rbfix](photo\rbfix.png)
+
+<div align="center">图1 rbfix</div>
+
+实现以上的操作对应在红黑树中，便是**左旋 + 染色**。
+
+对于RR的叔红情况，与其等价的四阶B树的情况如下所示：
+
+![rbrr_r](photo\rbrr_r.png)
+
+<div align="center">图1 rbrr_r</div>
+
+根据B树的自平衡性，这个已经满了的节点必须分裂，分裂后的情况如下所示：
+
+![rbrr_r_fix](photo\rbrr_r_fix.png)
+
+<div align="center">图1 rbrr_r_fix</div>
+
+对于LR的叔黑情况，与其等价的四阶B树的情况如下所示：
+
+![rblr](photo\rblr.png)
+
+<div align="center">图1 rblr</div>
+
+对于叔黑的情况，修复结果如下所示：
+
+![rbfix](photo\rbfix.png)
+
+<div align="center">图1 rbfix</div>
+
+对于LR的叔红情况，与其等价的四阶B树的情况如下所示：
+
+![rblr_r](photo\rblr_r.png)
+
+<div align="center">图1 rblr_r</div>
+
+
+
+上述修复情况如下所示：
+
+![rblr_r_fix](photo/rblr_r_fix.png)
+
+<div align="center">图1 rblr_r_fix</div>
+
+对于RL的叔黑情况，与其等价的四阶B树的情况如下所示：
+
+![rbrl](photo\rbrl.png)
+
+<div align="center">图1 rbrl</div>
+
+对于叔黑的情况，修复结果如下所示：
+
+![rbfix](photo\rbfix.png)
+
+<div align="center">图1 rbfix</div>
+
+对于RL的叔红情况，与其等价的四阶B树的情况如下所示：
+
+![rbrl_r](photo\rbrl_r.png)
+
+<div align="center">图1 rbrl_r</div>
+
+上述修复情况如下所示：
+
+![rbrl_r_fix](photo/rbrl_r_fix.png)
+
+<div align="center">图1 rbrl_r_fix</div>
+
+以上的八种情况都是一次修复，修复一层后，不平衡可能向上传递，所以while(TRUE)或递归是必要的，但在系统软件中最好是采用while(TRUE)的方式，这还是因为之前的系统栈溢出的问题，这里就不过多阐述了。
+
+再说红黑树删除的实现，首先，按照二叉搜索树的删除用中序遍历后继补，然后再，具体对应关系如下：
+
+以下是两种删除红色节点的情况：
+
+对于红色实叶节点：
+
+这种情况不管是删左右哪个红色实叶节点，直接删除即可，不会破坏四阶B树的平衡，一个较大的结构如下所示：
+
+![full](photo/full.png)
+
+<div align="center">图1 full</div>
+
+从上图等价的四阶B树可以看出：直接删红实叶节点，不会造成不平恒。
+
+对于黑色实叶节点：
+
+![rb_b_full](photo\rb_b_full.png)
+
+<div align="center">图1 rb_b_full</div>
+
+从上图等价的四阶B树可以看出：直接删红实叶节点，会造成不平恒。
+
+介绍了以上的两种基本情况，接下来，便可以讲完整的红黑树的删除了，红黑树的删除有两步：
+
+1. 按照BST找到直接后继（找前驱也行，这里只实现了找后继，只找以删除节点为根的子树）
+2. 根据直接后继的颜色对红黑树进行修复
+
+根据以上的第一步，始终可以发现：找到的实际叶节点不是红色，就是黑色。如果找到的是红色，则用这个红叶节点，直接代替要被删除的节点。如果是黑色，我们一步步推导，最后得出一共有几种情况（这里，不要只看Linux源码，要自己推导，这样才能真的理解红黑树，另外，红黑树的删除中父节点的颜色在单层循环中是无意义的，只有在向上传导时，才有意义）。
+
+首先，第一种大情况，最后找到的是黑色的叶子节点且其兄弟为黑色。<font color="#ff0000">在这种情况下，兄弟最多只能有一层孩子</font>，这是为什么？如下所示：
+
+![remove_buddy_black_no](photo\remove_buddy_black_no.png)
+
+<div align="center">图1 remove_buddy_black_no</div>
+
+不管是想要删除左黑子，还是右黑子，都会造成红黑树的不平衡。在限定条件兄弟为黑的条件下，原本的最小不平衡子树是平衡的，且一边是黑叶节点，对应另一边也一定黑高只有一。根据这个原因，可以有以下三种小情况：
+
+**甲**、兄弟无孩子
+
+用相同的图再来表示一次：
+
+![remove_buddy_black_no](photo\remove_buddy_black_no.png)
+
+<div align="center">图1 remove_buddy_black_no</div>
+
+这种情况下，请自行用手遮挡左孩子或右孩子用作删除节点，这时会发现：左右的黑高不一致，故最简单的修复方式就是将另一个黑色节点变为红色，合并到同一个四阶B树节点中，如下所示：
+
+![remove_buddy_black_no_fix](photo\remove_buddy_black_no_fix.png)
+
+<div align="center">图1 remove_buddy_black_no_fix</div>
+
+这样就保证了原本最小不平衡子树的平衡。
+
+**乙**、兄弟有贴近自己一侧的孩子（这里只画出当实际被删除节点是左兄弟的情况）
+
+![remove_buddy_black_closer](photo\remove_buddy_black_closer.png)
+
+<div align="center">图1 remove_buddy_black_closer</div>
+
+以上两种其实是一种，都只看是否有近侄，对于远侄是不会处理的。有近侄就把近侄过继到被删节点即可（当然不能这样，因为这只是单纯从颜色看，真到操作的时候，还必须看值的大小，毕竟红黑树还是BST），这样就能保证黑高的相同。修复如下所示：
+
+![remove_buddy_black_closer_fix](photo\remove_buddy_black_closer_fix.png)
+
+<div align="center">图1 remove_buddy_black_closer_fix</div>
+
+这样就修复完了，其实就是将近侄先**右旋**再**左旋**（如果实际被删除节点是右孩子就先**左旋**再**右旋**）。
+
+**丙**、兄弟无贴近自己一侧的孩子（这里只画出当实际被删除节点是左兄弟的情况）
+
+![remove_buddy_black_far](photo\remove_buddy_black_far.png)
+
+<div align="center">图1 remove_buddy_black_far</div>
+
+这里，删除黑色节点50，为了保证红黑树的平衡需要将节点60左旋，修复如下所示：
+
+![remove_buddy_black_far_fix](photo\remove_buddy_black_far_fix.png)
+
+<div align="center">图1 remove_buddy_black_far_fix</div>
+
+实现这个修复就是将60**左旋**（如果实际被删除节点是右孩子就**右旋**）。
+
+最后，第二种大情况，最后找到的是黑色的叶子节点且其兄弟为红色。<font color="#ff0000">在这种情况下，兄弟最少有一层都满的黑孩子，最多只能有两层孩子</font>，这是为什么？如下所示：
+
+![remove_buddy_red](photo\remove_buddy_red.png)
+
+<div align="center">图1 remove_buddy_red</div>
+
+如果红兄弟但凡少一个黑孩子就会导致原本的红黑树黑高错误，在假设红黑树的构建完全无误的前提下，找到实际被删节点的兄弟为红色的前提下，起码的结构一定是这样。所以，上述的红字必然成立。
+
+根据这个原因，可以有以下两种种小情况：
+
+**甲**、两黑侄子无近侄孙（这里只画出当实际被删除节点是左兄弟的情况）
+
+情况如下所示：
+
+![remove_buddy_red_far](photo\remove_buddy_red_far.png)
+
+<div align="center">图1 remove_buddy_red_far</div>
+
+修复如下所示：
+
+![remove_buddy_red_far_fix](photo\remove_buddy_red_far_fix.png)
+
+<div align="center">图1 remove_buddy_red_far_fix</div>
+
+实现以上的修复，就是将原本四阶B树父节点中的黑值放在无近侄孙对应的四阶B树节点中，对应的操作就是：将65左旋，然后将中间过程的60再左旋（如果实际被删除节点是右孩子就是两次不连贯的右旋）。
+
+**乙**、两黑侄子有近侄孙（这里只画出当实际被删除节点是左兄弟的情况）
+
+情况如下所示：
+
+![remove_buddy_red_closer](photo\remove_buddy_red_closer.png)
+
+<div align="center">图1 remove_buddy_red_closer</div>
+
+修复如下所示：
+
+![remove_buddy_red_closer_fix](photo\remove_buddy_red_closer_fix.png)
+
+<div align="center">图1 remove_buddy_red_closer_fix</div>
+
+实现以上的修复，就是将原四阶B树父节点的黑值补到实际被删除节点处，然后用最近侄孙补到原四阶B树父节点的黑值，对应的操作就是：将55右旋，再右旋，最后左旋（如果实际被删除节点是右孩子就是左旋、左旋，再右旋）。
+
+红黑树的很多操作都是对称的，所以一个方向上的处理完，另一个方向上的问题一定是对称的。
+
+到此，红黑树的删除也讲解完毕。
+
+如果想要可视化查看各种数据结构链的关系，可以查看https://www.cs.usfca.edu/~galles/visualization/Algorithms.html。涉及到红黑树的删除部分，该网站采用的是找前驱，所以会有实现上的不一样。
+
+###### 虚拟运行时间
+
+权值表如下所示（直接采用Linux的权值表，有什么用之后再说）：
+
+```c
+const int sched_prio_to_weight[40] = {
+    88761,
+    71755,
+    56483,
+    46273,
+    36291,
+    29154,
+    23254,
+    18705,
+    14949,
+    11916,
+    9548,
+    7620,
+    6100,
+    4904,
+    3906,
+    3121,
+    2501,
+    1991,
+    1586,
+    1277,
+    1024,
+    820,
+    655,
+    526,
+    423,
+    335,
+    272,
+    215,
+    172,
+    137,
+    110,
+    87,
+    70,
+    56,
+    45,
+    36,
+    29,
+    23,
+    18,
+    15,
+};
+```
 
 ##### 任务状态段（TSS）
 
